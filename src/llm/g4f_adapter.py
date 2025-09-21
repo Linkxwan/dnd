@@ -2,7 +2,7 @@ from typing import List, Dict
 import g4f
 from g4f.client import Client
 from g4f.Provider import RetryProvider, LMArena, PollinationsAI, OpenaiChat
-from llm_adapter import ILlm
+from .illm_adapter import ILlm
 import g4f.debug
 
 class G4fClient(ILlm):
