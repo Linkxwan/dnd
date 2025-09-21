@@ -1,0 +1,1 @@
+# storage_adapter.py
