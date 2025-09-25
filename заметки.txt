@@ -1,0 +1,215 @@
+Ты попросил привести текущий код к более чистой и архитектурно правильной структуре. Ниже я покажу:
+
+Какой у тебя сейчас архитектурный бардак (анализ текущего кода)
+
+Как разделить ответственность по модулям
+
+Как выглядит улучшенная архитектура
+
+Что конкретно переписать (пример)
+
+Как будет выглядеть main.py (основной цикл)
+
+Что можно улучшить дальше
+
+📌 Цель: отделить персонажей, агентов, LLM-адаптер и историю от логики main.py
+
+────────────────────────────────────
+
+🔍 Что сейчас не так:
+
+Всё в одном файле: персонажи, LLM-запросы, промпты, история, логика ходов.
+
+Повторяется код генерации NPC_PROMPT.
+
+Прямая вставка JSON-объектов в f-строки.
+
+Промпты руками дублируются и не шаблонизированы.
+
+Нет понятия «игрок», «агент», «гейммастер», как сущностей/классов.
+
+────────────────────────────────────
+
+✅ Что должно быть (по архитектуре):
+
+Модули:
+
+src/
+├── agents/
+│ └── base_agent.py ← Базовый класс Agent
+│ └── npc_agent.py ← NPC-агент
+│ └── player_agent.py ← пользователь
+├── characters/
+│ └── character.py ← структура персонажа
+├── llm/
+│ └── g4f_adapter.py
+│ └── prompts.py ← шаблоны промптов
+├── game/
+│ └── history.py ← История событий
+│ └── turn_loop.py ← Основной цикл игры
+├── main.py
+
+────────────────────────────────────
+
+📦 Основные классы:
+
+Character – модель персонажа
+
+Agent – принимает решение (NPC или человек)
+
+LLMAdapter – работает с OpenAI / g4f / LM Studio
+
+PromptBuilder – собирает промпты для агента/гм
+
+GameHistory – логирует и хранит события
+
+────────────────────────────────────
+
+📘 Пример refactor’а твоего кода:
+
+🔸 character.py
+
+from dataclasses import dataclass
+
+@dataclass
+class Character:
+name: str
+hp: int
+stats: dict
+char_class: str
+controller: str
+level: int
+xp: int
+
+🔸 agents/base_agent.py
+
+class Agent:
+def init(self, character, llm_client):
+self.character = character
+self.llm = llm_client
+
+def decide(self, game_history: list[str]) -> str:
+    raise NotImplementedError
+
+
+🔸 agents/npc_agent.py
+
+from src.llm.prompts import build_npc_prompt
+from src.agents.base_agent import Agent
+
+class NPCAgent(Agent):
+def decide(self, game_history):
+prompt = build_npc_prompt(self.character, game_history)
+response = self.llm.user_prompt_chat(user_prompt=prompt)
+return response
+
+🔸 agents/player_agent.py
+
+class PlayerAgent(Agent):
+def decide(self, game_history):
+print("Игроку нужно принять решение вручную.")
+return input(">>> ")
+
+🔸 llm/prompts.py
+
+def build_npc_prompt(character, history):
+stats = character.stats
+return f"""
+Ты — AI-агент, управляющий персонажем из игры в стиле DND.
+
+Имя персонажа: {character.name}
+Класс: {character.char_class}
+Уровень: {character.level}
+ХП: {character.hp}
+Характеристики: Сила={stats['str']}, Ловкость={stats['dex']}, Интеллект={stats['int']}, ...
+
+История:
+{history}
+
+Опиши, что ты чувствуешь и какое действие предпринимаешь. Один абзац, говори просто.
+"""
+
+def build_gm_prompt(history):
+return f"""Ты — гейммастер...
+{history}
+...Сгенерируй следующую сцену."""
+
+🔸 game/history.py
+
+class GameHistory:
+def init(self):
+self.events = []
+
+def add(self, role: str, content: str):
+    self.events.append({"role": role, "content": content})
+
+def __str__(self):
+    return "\n".join([f"{e['role']}: {e['content']}" for e in self.events])
+
+
+🔸 game/turn_loop.py
+
+def run_turn(agents: list, gm_agent, history):
+for agent in agents:
+response = agent.decide(str(history))
+print(f"{agent.character.name}: {response}")
+history.add(agent.character.name, response)
+
+gm_response = gm_agent.decide(str(history))
+print(f"ГМ: {gm_response}")
+history.add("GM", gm_response)
+
+
+🔸 main.py
+
+from src.characters.character import Character
+from src.llm.g4f_adapter import G4fClient
+from src.agents.npc_agent import NPCAgent
+from src.agents.player_agent import PlayerAgent
+from src.game.history import GameHistory
+from src.agents.npc_agent import NPCAgent
+
+client = G4fClient()
+history = GameHistory()
+
+Инициализация персонажей
+
+artem = Character(name="Артем", hp=12, stats=..., char_class="Воин", controller="player", level=1, xp=0)
+azerty = Character(name="Азерти", hp=8, stats=..., char_class="Друид", controller="npc", level=1, xp=0)
+
+Агенты
+
+artem_agent = PlayerAgent(artem, client)
+azerty_agent = NPCAgent(azerty, client)
+gm_agent = NPCAgent(Character(name="GM", hp=0, stats={}, char_class="", controller="gm", level=0, xp=0), client)
+
+Основной цикл
+
+from src.game.turn_loop import run_turn
+
+for _ in range(5):
+run_turn([artem_agent, azerty_agent], gm_agent, history)
+
+────────────────────────────────────
+
+🧼 Преимущества:
+
+Разделение логики и данных
+
+Можно подключать разных агентов (LLM, человек, скрипт)
+
+Поддержка нескольких персонажей без копипасты
+
+Удобно добавлять память, RAG, визуализацию и т.п.
+
+Можно тестировать агентов отдельно
+
+────────────────────────────────────
+
+📦 Хочешь:
+
+scaffold проекта с такими файлами?
+
+или сначала только пример NPC агента и PromptBuilder?
+
+Могу сгенерировать исходный код в файлах — скажи, как удобнее.

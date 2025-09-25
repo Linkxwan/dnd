@@ -1,1 +1,67 @@
 # npc_agent.py
+
+from typing import Any, Dict
+from src.prompts.prompts import build_npc_prompt
+from src.agents.iagent import IAgent
+from src.llm.g4f_adapter import G4fClient
+
+class NPCAgent(IAgent):
+    def __init__(self, character):
+        super().__init__()
+        self.character = character
+        self.llm = G4fClient()
+    
+    def get_id(self) -> str:
+        """
+        Уникальный ID агента (например, 'npc_1' или 'elmar_the_wise').
+        """
+        pass
+
+    def get_type(self) -> str:
+        """
+        Тип агента: "human", "llm", "random", "rule_based" и т.п.
+        """
+        pass
+
+    def observe(self, observation) -> None:
+        """
+        Получает событие/наблюдение: может быть обновление поля боя, речи другого агента и т.п.
+        observation может включать: окружение, действия других персонажей, системные события.
+        """
+        pass
+
+    def decide(self, game_history):
+        prompt = build_npc_prompt(self.character, game_history)
+        response = self.llm.user_prompt_chat(user_prompt=prompt)
+        return response
+
+    def apply_result(self, result) -> None:
+        """
+        Получает исход последнего действия (результат броска, последствия, урон и т.п.)
+        """
+        pass
+
+    def serialize(self) -> Dict[str, Any]:
+        """
+        Сохранение состояния (статы, память, цели, истории и т.п.)
+        """
+        pass
+
+    def restore(self, data: Dict[str, Any]) -> None:
+        """
+        Восстановление из сохранения
+        """
+        pass
+
+    def get_character_summary(self) -> str:
+        """
+        Краткое текстовое описание персонажа — используется при генерации LLM-подсказок.
+        """
+        pass
+
+    def is_human_controlled(self) -> bool:
+        """
+        Возвращает True, если агент — человек, False — LLM/бот.
+        Удобно для UI.
+        """
+        return self.get_type() == "human"

@@ -1,7 +1,7 @@
 # agent.py
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
-from game_models import GameState, Action, ActionResult, Observation # Предполагаемые классы
+# from game_models import GameState, Action, ActionResult, Observation # Предполагаемые классы
 
 class IAgent(ABC):
     @abstractmethod
@@ -19,7 +19,7 @@ class IAgent(ABC):
         pass
 
     @abstractmethod
-    def observe(self, observation: Observation) -> None:
+    def observe(self, observation) -> None:
         """
         Получает событие/наблюдение: может быть обновление поля боя, речи другого агента и т.п.
         observation может включать: окружение, действия других персонажей, системные события.
@@ -27,14 +27,14 @@ class IAgent(ABC):
         pass
 
     @abstractmethod
-    def decide(self, game_state: GameState) -> Action:
+    def decide(self, game_state):
         """
         Возвращает следующее действие агента в виде экземпляра Action (не просто dict).
         """
         pass
 
     @abstractmethod
-    def apply_result(self, result: ActionResult) -> None:
+    def apply_result(self, result) -> None:
         """
         Получает исход последнего действия (результат броска, последствия, урон и т.п.)
         """
