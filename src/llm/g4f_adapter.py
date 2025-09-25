@@ -25,7 +25,7 @@ class G4fClient(ILlm):
         resp = self._client.chat.completions.create(
             model=model,
             messages=messages,
-            # provider=RetryProvider([LMArena, PollinationsAI], shuffle=False),
+            provider=RetryProvider([PollinationsAI], shuffle=False),
             stream=stream,
         )
         if stream:

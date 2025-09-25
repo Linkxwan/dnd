@@ -3,13 +3,15 @@
 from typing import Any, Dict
 from src.prompts.prompts import build_npc_prompt
 from src.agents.iagent import IAgent
+from src.core.story_log import StoryLog
 from src.llm.g4f_adapter import G4fClient
 
 class NPCAgent(IAgent):
-    def __init__(self, character):
+    def __init__(self, character, client=None):
         super().__init__()
         self.character = character
-        self.llm = G4fClient()
+        self.client = client or G4fClient()
+        self.story_log = StoryLog()
     
     def get_id(self) -> str:
         """
@@ -31,8 +33,12 @@ class NPCAgent(IAgent):
         pass
 
     def decide(self, game_history):
-        prompt = build_npc_prompt(self.character, game_history)
-        response = self.llm.user_prompt_chat(user_prompt=prompt)
+        system_prompt, user_prompt = build_npc_prompt(self.character, game_history)
+        response = self.client.chat(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt
+        )
+        # self.story_log.add(role=self.character['name'], content=response, type="narration")
         return response
 
     def apply_result(self, result) -> None:
